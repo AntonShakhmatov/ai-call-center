@@ -1,0 +1,69 @@
+// Prisma schema for the ai-voice-agent platform foundation.
+// Only the minimal persistent models required for the initial foundation
+// are defined here. Business / telephony / AI-specific fields are intentionally
+// left out until the corresponding features are implemented.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CallStatus {
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  TRANSFERRED
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ConversationMessageRole {
+  USER
+  AGENT
+  SYSTEM
+}
+
+model Call {
+  id           String   @id @default(uuid()) @db.Uuid
+  direction    CallDirection @default(INBOUND)
+  status       CallStatus @default(RINGING)
+  callerNumber String?
+  startedAt    DateTime @default(now())
+  endedAt      DateTime?
+  conversation Conversation?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+}
+
+model Conversation {
+  id        String                @id @default(uuid()) @db.Uuid
+  call      Call                  @relation(fields: [callId], references: [id], onDelete: Cascade)
+  callId    String                @unique @db.Uuid
+  startedAt DateTime              @default(now())
+  endedAt   DateTime?
+  messages  ConversationMessage[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+}
+
+model ConversationMessage {
+  id             String                  @id @default(uuid()) @db.Uuid
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String                  @db.Uuid
+  role           ConversationMessageRole
+  content        String
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([conversationId])
+}
